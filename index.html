@@ -3,50 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎲 부산게이미피케이션 교육연구회 출석체크 🎲</title>
+    <title>🎲 소셜 클럽 실시간 출석체크 🎲</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase Legacy/Compat CDN (단일 파일 연동 최적화 버전) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
         body {
             -webkit-tap-highlight-color: transparent;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
         input, button, select {
-            font-size: 16px !important; /* iOS 포커스 시 화면 자동 줌 방지 */
+            font-size: 16px !important; /* iOS 포커스 시 화면 자동 줌 현상 철저 차단 */
         }
-        .neubrutalism-shadow {
-            box-shadow: 4px 4px 0px 0px #1e293b;
-        }
-        @media (min-width: 640px) {
-            .neubrutalism-shadow { box-shadow: 6px 6px 0px 0px #1e293b; }
-        }
+        .neubrutalism-shadow { box-shadow: 4px 4px 0px 0px #1e293b; }
+        @media (min-width: 640px) { .neubrutalism-shadow { box-shadow: 6px 6px 0px 0px #1e293b; } }
         .neubrutalism-shadow-sm { box-shadow: 3px 3px 0px 0px #1e293b; }
         .neubrutalism-shadow-lg { box-shadow: 6px 6px 0px 0px #1e293b; }
-        @media (min-width: 640px) {
-            .neubrutalism-shadow-lg { box-shadow: 10px 10px 0px 0px #1e293b; }
-        }
-        .neubrutalism-active:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px 0px #1e293b;
-        }
+        @media (min-width: 640px) { .neubrutalism-shadow-lg { box-shadow: 10px 10px 0px 0px #1e293b; } }
+        .neubrutalism-active:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px 0px #1e293b; }
         @keyframes fall {
             0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
             100% { transform: translateY(100vh) rotate(540deg); opacity: 0; }
         }
-        .confetti {
-            position: absolute;
-            animation: fall 3s linear infinite;
-            border-radius: 4px;
-        }
+        .confetti { position: absolute; animation: fall 3s linear infinite; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 font-sans pb-16 relative overflow-x-hidden">
 
-    <!-- 상단 실시간 상태 바 -->
+    <!-- 상단 실시간 상태 서버 알림줄 -->
+    <div id="connection-warning-bar" class="bg-amber-500 text-slate-950 py-2 px-4 text-center text-xs font-bold hidden border-b-4 border-slate-950">
+        ⚠️ Firebase 설정값이 비어있습니다! 코드 내부의 설정을 완료해야 스마트폰 간 실시간 연동이 시작됩니다.
+    </div>
     <div class="bg-slate-900 text-slate-200 py-3 px-4 flex flex-col sm:flex-row justify-between items-center text-xs border-b-4 border-slate-950 font-mono gap-2 text-center">
         <div class="flex items-center space-x-2">
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping"></span>
-            <span>⚡ 단일 파일 로컬 스토리지 시스템 가동중</span>
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>⚡ 클라우드 데이터베이스 실시간 무선 동기화 가동중</span>
         </div>
         <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
             <span id="top-bar-date">📅 모임 세션 날짜: ---- -- --</span>
@@ -77,38 +70,24 @@
                 
                 <!-- 세션 상태 카드 -->
                 <div id="session-status-card" class="border-4 border-slate-950 rounded-2xl p-4 mb-6 relative bg-rose-50">
-                    <div id="session-badge" class="absolute -top-3 right-3 text-white border-2 border-slate-950 text-[10px] sm:text-xs px-2.5 py-1 rounded font-black tracking-wider uppercase bg-rose-600">
-                        INACTIVE
-                    </div>
-                    <h3 id="session-title" class="font-extrabold text-base sm:text-lg text-slate-900 mb-1 pr-16">
-                        출석 세션이 닫혀있습니다 🔒
-                    </h3>
+                    <div id="session-badge" class="absolute -top-3 right-3 text-white border-2 border-slate-950 text-[10px] sm:text-xs px-2.5 py-1 rounded font-black tracking-wider uppercase bg-rose-600">INACTIVE</div>
+                    <h3 id="session-title" class="font-extrabold text-base sm:text-lg text-slate-900 mb-1 pr-16">출석 세션이 닫혀있습니다 🔒</h3>
                     <div class="flex flex-wrap justify-between items-center mt-3 gap-2">
-                        <span id="session-date-badge" class="text-xs sm:text-sm font-bold bg-white px-3 py-1 rounded-md border-2 border-slate-950">
-                            날짜: ----(--)
-                        </span>
-                        <span id="session-guide" class="text-xs text-slate-500 font-mono">
-                            운영진의 가동을 기다리세요
-                        </span>
+                        <span id="session-date-badge" class="text-xs sm:text-sm font-bold bg-white px-3 py-1 rounded-md border-2 border-slate-950">날짜: ----(--)</span>
+                        <span id="session-guide" class="text-xs text-slate-500 font-mono">운영진의 가동을 기다리세요</span>
                     </div>
                 </div>
 
                 <!-- 출석체크 폼 -->
                 <form id="attendance-form" class="space-y-5 sm:space-y-6">
                     <div>
-                        <label class="block text-sm font-black text-slate-900 mb-2">
-                            1. 본인 이름 입력 👤
-                        </label>
+                        <label class="block text-sm font-black text-slate-900 mb-2">1. 본인 이름 입력 👤</label>
                         <input type="text" id="user-name-input" placeholder="이름을 정확히 입력해 주세요 (예: 김선아)" class="w-full bg-slate-50 border-4 border-slate-950 p-3.5 sm:p-4 rounded-xl font-bold placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all text-base text-center">
                     </div>
-
                     <div>
-                        <label class="block text-sm font-black text-slate-900 mb-2">
-                            2. 오늘의 모임 인증 번호 6자리 🔑
-                        </label>
+                        <label class="block text-sm font-black text-slate-900 mb-2">2. 오늘의 모임 인증 번호 6자리 🔑</label>
                         <input type="text" id="user-code-input" maxLength="6" inputmode="numeric" pattern="[0-9]*" placeholder="숫자 6자리 입력" class="w-full bg-slate-50 border-4 border-slate-950 p-3 rounded-xl font-bold text-center text-2xl sm:text-3xl tracking-widest placeholder-slate-300 focus:outline-none">
                     </div>
-
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-base sm:text-lg py-3.5 sm:py-4 border-4 border-slate-950 rounded-2xl neubrutalism-shadow neubrutalism-active cursor-pointer transition-all active:scale-98">
                         🚀 출석 완료하기
                     </button>
@@ -118,38 +97,27 @@
                 <div class="mt-6 sm:mt-8 border-t-4 border-slate-150 pt-6">
                     <h4 class="font-black text-sm text-slate-900 mb-3 flex justify-between items-center">
                         <span>👥 오늘 실시간 출석 확인 현황</span>
-                        <span id="total-members-count" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-300">
-                            총원 --명
-                        </span>
+                        <span id="total-members-count" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-300">총원 --명</span>
                     </h4>
-                    <div id="live-feed-box" class="bg-slate-900 text-slate-200 p-3 sm:p-4 rounded-xl font-mono text-xs max-h-48 overflow-y-auto">
-                        <!-- 자바스크립트로 주입됨 -->
-                    </div>
+                    <div id="live-feed-box" class="bg-slate-900 text-slate-200 p-3 sm:p-4 rounded-xl font-mono text-xs max-h-48 overflow-y-auto"></div>
                 </div>
-
             </div>
         </div>
 
         <!-- ================= 관리자 화면 패널 ================= -->
         <div id="admin-panel" class="col-span-12 space-y-6 sm:space-y-8 hidden">
-            
             <!-- 상단 제어 센터 -->
             <div class="bg-white border-4 border-slate-950 p-4 sm:p-6 rounded-3xl neubrutalism-shadow">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b-4 border-slate-100">
                     <div>
                         <h2 class="text-xl sm:text-2xl font-black text-slate-900">⚙️ 운영진 전용 관리 콘솔</h2>
-                        <p class="text-xs font-bold text-slate-500 mt-1">
-                            당일 출석 세션을 제어하고, 전체 회원 명부를 실시간 추가 및 삭제 처리합니다.
-                        </p>
+                        <p class="text-xs font-bold text-slate-500 mt-1">당일 출석 세션을 제어하고, 전체 회원 명부를 실시간 추가 및 삭제 처리합니다.</p>
                     </div>
-                    
                     <!-- 암호 변경 영역 -->
                     <div class="bg-slate-50 p-3 rounded-xl border-2 border-slate-950 w-full md:w-auto">
                         <div id="pw-view-mode" class="flex justify-between items-center gap-4">
                             <span class="text-xs font-bold text-slate-700">🔑 비밀번호: ****</span>
-                            <button id="go-change-pw-btn" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-1.5 px-3 rounded-md border border-slate-950 cursor-pointer active:scale-95">
-                                암호 변경
-                            </button>
+                            <button id="go-change-pw-btn" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-1.5 px-3 rounded-md border border-slate-950 cursor-pointer active:scale-95">암호 변경</button>
                         </div>
                         <div id="pw-edit-mode" class="flex flex-wrap items-center gap-2 hidden">
                             <input type="text" id="new-pw-input" placeholder="새 비밀번호" class="bg-white border-2 border-slate-950 p-1.5 rounded text-xs font-bold flex-1 md:flex-none">
@@ -172,12 +140,8 @@
                                 <span id="admin-current-code" class="font-mono text-2xl sm:text-3xl font-black text-slate-900 tracking-wider">------</span>
                             </div>
                             <div class="grid grid-cols-2 gap-2">
-                                <button id="btn-start-session" class="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black py-3 sm:py-2.5 px-3 rounded-xl border-2 border-slate-950 cursor-pointer text-xs active:scale-95">
-                                    ▶️ 출석 시작
-                                </button>
-                                <button id="btn-refresh-code" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 sm:py-2.5 px-2 rounded-xl border-2 border-slate-950 cursor-pointer text-[10px] sm:text-[11px] active:scale-95">
-                                    🔄 코드 새로 갱신
-                                </button>
+                                <button id="btn-start-session" class="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black py-3 sm:py-2.5 px-3 rounded-xl border-2 border-slate-950 cursor-pointer text-xs active:scale-95">▶️ 출석 시작</button>
+                                <button id="btn-refresh-code" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 sm:py-2.5 px-2 rounded-xl border-2 border-slate-950 cursor-pointer text-[10px] sm:text-[11px] active:scale-95">🔄 코드 새로 갱신</button>
                             </div>
                         </div>
                     </div>
@@ -190,9 +154,7 @@
                         </div>
                         <div>
                             <input type="date" id="admin-date-input" class="w-full bg-white border-4 border-slate-950 p-2 rounded-xl font-bold text-center text-sm mb-3 focus:outline-none">
-                            <button id="btn-close-session" class="w-full bg-rose-500 text-white font-black py-3 sm:py-2.5 rounded-xl border-2 border-slate-950 text-xs active:scale-95">
-                                🟥 출석 마감 (창 닫기)
-                            </button>
+                            <button id="btn-close-session" class="w-full bg-rose-500 text-white font-black py-3 sm:py-2.5 rounded-xl border-2 border-slate-950 text-xs active:scale-95">🟥 출석 마감 (창 닫기)</button>
                         </div>
                     </div>
 
@@ -200,43 +162,23 @@
                     <div class="bg-emerald-50 p-4 sm:p-5 rounded-2xl border-4 border-slate-950 neubrutalism-shadow-sm">
                         <h4 class="font-black text-sm text-slate-950 mb-3">📈 당일 세션 상태 집계</h4>
                         <div class="grid grid-cols-2 gap-2 text-xs font-bold">
-                            <div class="bg-white p-2 border border-slate-300 rounded-lg">
-                                <span class="text-slate-500 block text-[10px] sm:text-xs">정상 출석 🟢</span>
-                                <span id="stat-present" class="text-base sm:text-lg font-black text-emerald-600">0명</span>
-                            </div>
-                            <div class="bg-white p-2 border border-slate-300 rounded-lg">
-                                <span class="text-slate-500 block text-[10px] sm:text-xs">지각 처리 🟡</span>
-                                <span id="stat-late" class="text-base sm:text-lg font-black text-amber-500">0명</span>
-                            </div>
-                            <div class="bg-white p-2 border border-slate-300 rounded-lg col-span-2 sm:col-span-1">
-                                <span class="text-slate-500 block text-[10px] sm:text-xs">지각/결석 예정 🕒</span>
-                                <span id="stat-scheduled" class="text-base sm:text-lg font-black text-indigo-500">0명</span>
-                            </div>
-                            <div class="bg-white p-2 border border-slate-300 rounded-lg col-span-2 sm:col-span-1">
-                                <span class="text-slate-500 block text-[10px] sm:text-xs">결석 확정 🔴</span>
-                                <span id="stat-absent" class="text-base sm:text-lg font-black text-rose-500">0명</span>
-                            </div>
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg"><span>정상 출석 🟢</span><span id="stat-present" class="text-base sm:text-lg font-black text-emerald-600">0명</span></div>
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg"><span>지각 처리 🟡</span><span id="stat-late" class="text-base sm:text-lg font-black text-amber-500">0명</span></div>
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg col-span-2 sm:col-span-1"><span>지각/결석 예정 🕒</span><span id="stat-scheduled" class="text-base sm:text-lg font-black text-indigo-500">0명</span></div>
+                            <div class="bg-white p-2 border border-slate-300 rounded-lg col-span-2 sm:col-span-1"><span>결석 확정 🔴</span><span id="stat-absent" class="text-base sm:text-lg font-black text-rose-500">0명</span></div>
                         </div>
-                        <div id="stat-summary-text" class="mt-3 text-[11px] font-semibold text-emerald-800 text-center bg-white/50 py-1 rounded">
-                            총원 0명 중 0명 기록됨
-                        </div>
+                        <div id="stat-summary-text" class="mt-3 text-[11px] font-semibold text-emerald-800 text-center bg-white/50 py-1 rounded">총원 0명 중 0명 기록됨</div>
                     </div>
                 </div>
             </div>
 
             <!-- 명부 제어창 -->
             <div class="bg-white border-4 border-slate-950 p-4 sm:p-6 rounded-3xl neubrutalism-shadow">
-                <h3 class="text-lg sm:text-xl font-black text-slate-950 mb-1 flex items-center gap-2">
-                    👥 모임 회원 명부 제어창
-                </h3>
-                <p class="text-xs font-bold text-slate-500 mb-4">
-                    새로운 동호인을 가입시키거나 명부에서 삭제할 수 있습니다. 변경된 사항은 실시간 반영됩니다.
-                </p>
+                <h3 class="text-lg sm:text-xl font-black text-slate-950 mb-1 flex items-center gap-2">👥 모임 회원 명부 제어창</h3>
+                <p class="text-xs font-bold text-slate-500 mb-4">새로운 동호인을 가입시키거나 명부에서 삭제할 수 있습니다. 변경된 사항은 서버를 통해 무선 실시간 반영됩니다.</p>
                 <form id="add-member-form" class="flex flex-col sm:flex-row gap-3 max-w-md">
                     <input type="text" id="new-member-name-input" placeholder="새로운 모임원 이름 입력" class="flex-1 bg-slate-50 border-2 border-slate-950 p-3 sm:p-2.5 rounded-xl font-bold text-sm focus:outline-none">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 py-3 sm:py-2.5 border-2 border-slate-950 rounded-xl text-xs whitespace-nowrap active:scale-95">
-                        ➕ 회원 추가하기
-                    </button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 py-3 sm:py-2.5 border-2 border-slate-950 rounded-xl text-xs whitespace-nowrap active:scale-95">➕ 회원 추가하기</button>
                 </form>
             </div>
 
@@ -247,7 +189,6 @@
                         <label class="block text-xs font-black text-slate-700 mb-1">🔍 이름 실시간 키워드 필터</label>
                         <input type="text" id="admin-search-input" placeholder="이름 입력..." class="w-full bg-slate-50 border-2 border-slate-950 p-2 text-sm rounded-lg font-bold">
                     </div>
-
                     <div class="w-full lg:w-auto flex flex-col sm:flex-row gap-2 sm:items-center justify-end">
                         <div class="text-xs font-black text-slate-700 mb-1 sm:mb-0">정렬 선택:</div>
                         <div class="grid grid-cols-3 sm:flex gap-1 sm:gap-2">
@@ -258,26 +199,13 @@
                     </div>
                 </div>
 
-                <div class="bg-blue-50 border-2 border-blue-400 p-3.5 rounded-xl mb-6 text-xs text-blue-900 leading-relaxed">
-                    📌 <strong>운영진 출석 관리 가이드:</strong> 
-                    <ul class="list-disc ml-5 mt-1 space-y-1 font-semibold">
-                        <li>사용자가 등록 시 <strong>17:30:59초 이전</strong>이면 🟢 정상, <strong>17:31:00초부터</strong>는 🟡 지각으로 자동 체크됩니다.</li>
-                        <li><strong>20:00(오후 8시) 이후</strong>에는 아직 미체크 상태인 모든 모임원이 자동으로 🔴 결석으로 전환됩니다.</li>
-                        <li>모임 전 사정을 전해와 ‘지각/결석 예정’으로 수동 조정한 인원도 <strong>누계 지각 및 결석 통계에는 예외 없이 합산 기록</strong>됩니다.</li>
-                    </ul>
-                </div>
-
                 <!-- 어드민 회원 카드 렌더링 영역 -->
-                <div id="admin-member-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- 스크립트로 동적 로드 -->
-                </div>
+                <div id="admin-member-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
-
         </div>
     </main>
 
     <!-- ================= 각종 모달 & 알림 레이어 ================= -->
-
     <!-- 1. 출석 성공 팝업 모달 -->
     <div id="success-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm hidden">
         <div id="confetti-container" class="absolute inset-0 pointer-events-none overflow-hidden z-50"></div>
@@ -285,7 +213,6 @@
             <div class="w-16 h-16 bg-blue-100 border-4 border-slate-950 rounded-full flex items-center justify-center mx-auto -mt-16 text-3xl neubrutalism-shadow-sm">🏆</div>
             <h3 class="text-2xl font-black text-slate-900 mt-4 mb-1">출석 완료!</h3>
             <p class="text-[11px] font-mono text-slate-500 bg-slate-100 py-1 px-3 rounded-full inline-block border border-slate-300 mb-6">정상적으로 인증 완료되었습니다.</p>
-            
             <div class="bg-slate-50 border-2 border-slate-950 rounded-2xl p-4 text-left font-mono text-xs space-y-3 mb-6">
                 <div class="flex justify-between"><span>성명:</span><span id="modal-res-name" class="font-black text-slate-900">--</span></div>
                 <div class="flex justify-between"><span>구분:</span><span id="modal-res-status" class="font-black text-emerald-600">--</span></div>
@@ -319,21 +246,16 @@
             <div class="flex justify-between items-center mb-4">
                 <div>
                     <h3 id="pre-modal-name" class="text-lg font-black text-slate-900">--- 님</h3>
-                    <p id="pre-modal-date" class="text-[11px] font-bold text-slate-500">사전 표기 조질</p>
+                    <p id="pre-modal-date" class="text-[11px] font-bold text-slate-500">사전 표기 조치</p>
                 </div>
                 <button id="close-pre-modal-btn" class="text-slate-400 hover:text-slate-900 font-bold p-1">✕</button>
             </div>
             <div class="space-y-3">
                 <p class="text-xs font-bold text-slate-500 leading-relaxed">사전 지참/결참 의사를 밝힌 경우, 예약을 표기할 수 있습니다.</p>
                 <div class="grid grid-cols-1 gap-2 pt-2">
-                    <button data-status="scheduled_late" class="pre-set-btn bg-yellow-50 hover:bg-yellow-100 text-yellow-900 text-xs font-black p-3.5 rounded-xl border-2 border-slate-950 text-left flex justify-between active:scale-98">
-                        <span>🕒 지각 예정 (사전 양해)</span><span>등록</span>
-                    </button>
-                    <button data-status="scheduled_absent" class="pre-set-btn bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-black p-3.5 rounded-xl border-2 border-slate-950 text-left flex justify-between active:scale-98">
-                        <span>💤 결석 예정 (사전 양해)</span><span>등록</span>
-                    </button>
-                    <button data-status="none" class="pre-set-btn bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-black p-3.5 rounded-xl border-2 border-slate-950 text-left flex justify-between active:scale-98">
-                        <span>⚪ 상태 내역 삭제 (초기화)</span><span>지우기</span>
+                    <button data-status="scheduled_late" class="pre-set-btn bg-yellow-50 hover:bg-yellow-100 text-yellow-900 text-xs font-black p-3.5 rounded-xl border-2 border-slate-950 text-left flex justify-between active:scale-98"><span>🕒 지각 예정 (사전 양해)</span><span>등록</span></button>
+                    <button data-status="scheduled_absent" class="pre-set-btn bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-black p-3.5 rounded-xl border-2 border-slate-950 text-left flex justify-between active:scale-98"><span>💤 결석 예정 (사전 양해)</span><span>등록</span></button>
+                    <button data-status="none" class="pre-set-btn bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-black p-3.5 rounded-xl border-2 border-slate-950 text-left flex justify-between active:scale-98"><span>⚪ 상태 내역 삭제 (초기화)</span><span>지우기</span>
                     </button>
                 </div>
             </div>
@@ -344,9 +266,7 @@
     <div id="delete-confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm hidden">
         <div class="bg-white border-4 border-slate-950 rounded-3xl p-6 max-w-sm w-full neubrutalism-shadow-lg text-center">
             <h3 class="text-xl font-black text-slate-950 mb-3">⚠️ 멤버 영구 제명</h3>
-            <p class="text-xs font-bold text-slate-600 mb-6 leading-relaxed">
-                정말로 <strong id="delete-modal-target" class="text-rose-600">[---]</strong> 님을 명렬에서 삭제하시겠습니까? 누적 통계 기록도 소멸됩니다.
-            </p>
+            <p class="text-xs font-bold text-slate-600 mb-6 leading-relaxed">정말로 <strong id="delete-modal-target" class="text-rose-600">[---]</strong> 님을 명렬에서 삭제하시겠습니까? 누적 통계 기록도 소멸됩니다.</p>
             <div class="grid grid-cols-2 gap-3">
                 <button id="execute-delete-btn" class="bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-xl border-2 border-slate-950 cursor-pointer text-xs active:scale-95">🗑️ 예, 삭제합니다</button>
                 <button id="cancel-delete-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl border-2 border-slate-950 cursor-pointer text-xs active:scale-95">취소</button>
@@ -363,112 +283,122 @@
         <p id="toast-message" class="text-xs font-bold text-slate-700 leading-relaxed">알림 메시지 본문</p>
     </div>
 
-    <!-- 푸터 -->
-    <footer class="mt-20 text-center text-xs font-bold text-slate-400 px-4">
-        <p>© 2026 모임 실시간 출석체크 관리 대시보드. All Rights Reserved.</p>
-        <p class="mt-1 font-mono">Designed for Neat & Perfect Gatherings.</p>
-    </footer>
-
     <!-- ================= 시스템 비즈니스 로직 자바스크립트 ================= -->
     <script>
+        // ★ [여기에 Firebase 설정값을 정확히 복사해 붙여넣으세요] ★
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
         // 51명 초기 마스터 명렬 고정 데이터
         const INITIAL_MEMBERS = [
             "권순호", "김윤경", "김현진", "류윤제", "민소윤", "박주홍", "백수빈", "변정희", "우지희", "이서현",
             "정세연", "정예슬", "조홍재", "최서현", "하진영", "홍성준", "김영찬", "오경서", "최복경", "최지윤",
             "오현수", "김예은", "조하나", "박도현", "김민지", "정어진", "이동규", "박미진", "정수민", "황보예린",
             "이현주", "권하정", "정유라", "신주희", "김선우", "조가영", "김류리", "최진영", "강다솜", "이동한",
-            "노혜민", "이지수", "박민영", "배우진", "정인영", "서예진", "김서현", "박정현", "김선아", "심미경",
-            "정규경"
+            "노혜민", "이지수", "박민영", "배우진", "정인영", "서예진", "김서현", "박정현", "김선아", "심미경", "정규경"
         ];
 
-        // 글로벌 상태 변수
+        // 글로벌 로컬 상태 데이터
         let state = {
-            adminPassword: '0000',
-            currentCode: '------',
-            activeDate: new Date().toISOString().split('T')[0],
-            isSessionActive: false,
-            members: [...INITIAL_MEMBERS],
-            attendance: {} // { "2026-05-18": { "홍길동": {status: "present", time: "15:30:22"} } }
+            config: { adminPassword: '0000', currentCode: '------', activeDate: new Date().toISOString().split('T')[0], isSessionActive: false },
+            members: INITIAL_MEMBERS.map(name => ({ name, cumulativeLate: 0, cumulativeAbsent: 0 })),
+            attendance: {} // 당일 출석 현황 캐싱 맵
         };
 
-        let currentView = 'user'; // 'user' or 'admin'
+        let currentView = 'user';
         let adminSortKey = 'name-asc';
         let selectedPreMember = null;
         let memberToDelete = null;
+        let db = null;
+        let unsubAttendance = null;
 
-        // 사운드 이펙트 팩토리
+        // Firebase 연동 활성화 검사 및 초기화
+        if (firebaseConfig.apiKey.includes("YOUR_")) {
+            document.getElementById('connection-warning-bar').classList.remove('hidden');
+        } else {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        }
+
+        // 사운드 시뮬레이터
         function playSound(type) {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (!AudioContext) return;
                 const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
                 osc.connect(gain); gain.connect(ctx.destination);
                 const now = ctx.currentTime;
-
                 if (type === 'success') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(330, now);
-                    osc.frequency.setValueAtTime(440, now + 0.1);
-                    osc.frequency.setValueAtTime(554, now + 0.2);
-                    osc.frequency.setValueAtTime(660, now + 0.3);
-                    gain.gain.setValueAtTime(0.08, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                    osc.start(now); osc.stop(now + 0.5);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(330, now); osc.frequency.setValueAtTime(440, now + 0.1); osc.frequency.setValueAtTime(554, now + 0.2); osc.frequency.setValueAtTime(660, now + 0.3);
+                    gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); osc.start(now); osc.stop(now + 0.5);
                 } else if (type === 'error') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(180, now);
-                    osc.frequency.linearRampToValueAtTime(100, now + 0.25);
-                    gain.gain.setValueAtTime(0.08, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                    osc.start(now); osc.stop(now + 0.25);
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(180, now); osc.frequency.linearRampToValueAtTime(100, now + 0.25);
+                    gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25); osc.start(now); osc.stop(now + 0.25);
                 } else if (type === 'click') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(400, now);
-                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
-                    gain.gain.setValueAtTime(0.05, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                    osc.start(now); osc.stop(now + 0.08);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08); osc.start(now); osc.stop(now + 0.08);
                 }
-            } catch (e) { console.warn("Audio Context blocked."); }
+            } catch (e) {}
         }
 
-        // 토스트 팝업 제어
         function triggerNotice(title, message, type = 'info') {
             const toast = document.getElementById('toast-notice');
-            const tTitle = document.getElementById('toast-title');
-            const tMsg = document.getElementById('toast-message');
-            
-            tTitle.innerText = title.toUpperCase();
-            tMsg.innerText = message;
-            
+            document.getElementById('toast-title').innerText = title.toUpperCase();
+            document.getElementById('toast-message').innerText = message;
             toast.className = "fixed bottom-4 left-4 right-4 md:bottom-6 md:right-6 md:left-auto z-50 max-w-md p-4 bg-white border-4 border-slate-950 rounded-2xl neubrutalism-shadow-lg flex flex-col space-y-3 animate-bounce";
-            if(type === 'success') tTitle.className = "text-sm font-black uppercase px-2 py-0.5 rounded border-2 bg-emerald-100 text-emerald-800 border-emerald-950";
-            else if(type === 'error') tTitle.className = "text-sm font-black uppercase px-2 py-0.5 rounded border-2 bg-rose-100 text-rose-800 border-rose-950";
-            else tTitle.className = "text-sm font-black uppercase px-2 py-0.5 rounded border-2 bg-blue-100 text-blue-800 border-blue-950";
-            
+            if(type === 'success') document.getElementById('toast-title').className = "text-sm font-black uppercase px-2 py-0.5 rounded border-2 bg-emerald-100 text-emerald-800 border-emerald-950";
+            else if(type === 'error') document.getElementById('toast-title').className = "text-sm font-black uppercase px-2 py-0.5 rounded border-2 bg-rose-100 text-rose-800 border-rose-950";
             toast.classList.remove('hidden');
             setTimeout(() => { toast.classList.add('hidden'); }, 4000);
         }
 
-        // 데이터 동기화 관리
-        function loadStorage() {
-            const data = localStorage.getItem('social_club_attendance_v2');
-            if(data) {
-                try {
-                    state = { ...state, ...JSON.parse(data) };
-                } catch(e) { console.error("Data restore error, clear fallback."); }
-            } else { saveStorage(); }
-        }
-        function saveStorage() {
-            localStorage.setItem('social_club_attendance_v2', JSON.stringify(state));
+        // 실시간 무선 서버 수신 리스너 엔진
+        function initRealtimeListeners() {
+            if (!db) return;
+
+            // 1. 공용 시스템 설정 연동 리스너
+            db.collection("social_attendance").doc("config").onSnapshot(doc => {
+                if (doc.exists) {
+                    state.config = doc.data();
+                    const oldDate = state.config.activeDate;
+                    document.getElementById('admin-date-input').value = state.config.activeDate;
+                    // 활성 날짜 세션 변경 감지 시 출석부 문서 수신 회선 스위칭 교체
+                    listenAttendanceRecord(state.config.activeDate);
+                } else {
+                    db.collection("social_attendance").doc("config").set(state.config);
+                }
+                render();
+            });
+
+            // 2. 마스터 멤버 리스트 및 누적 통계 연동 리스너
+            db.collection("social_attendance").doc("members").onSnapshot(doc => {
+                if (doc.exists) {
+                    state.members = doc.data().list || [];
+                } else {
+                    db.collection("social_attendance").doc("members").set({ list: state.members });
+                }
+                render();
+            });
         }
 
-        // 전체 화면 UI 렌더러
+        function listenAttendanceRecord(dateStr) {
+            if (unsubAttendance) unsubAttendance();
+            unsubAttendance = db.collection("social_attendance").doc(`records_${dateStr}`).onSnapshot(doc => {
+                state.attendance = doc.exists ? doc.data() : {};
+                render();
+            });
+        }
+
+        // UI 뷰어 드로잉 렌더러
         function render() {
-            // 상단 토글 및 날짜 바 동기화
-            document.getElementById('top-bar-date').innerText = `📅 모임 세션 날짜: ${state.activeDate}`;
+            document.getElementById('top-bar-date').innerText = `📅 모임 세션 날짜: ${state.config.activeDate}`;
             document.getElementById('toggle-view-btn').innerText = currentView === 'user' ? "⚙️ 관리자 대시보드" : "🙋 일반 출석체크화면";
             
             if (currentView === 'user') {
@@ -479,129 +409,93 @@
                 document.getElementById('admin-panel').classList.remove('hidden');
             }
 
-            // 1. 유저화면 전용 세션 카드 렌더링
+            // 출석 세션 활성 유효성 체크 레이아웃 구성
             const sessionCard = document.getElementById('session-status-card');
             const badge = document.getElementById('session-badge');
             const title = document.getElementById('session-title');
-            const dateBadge = document.getElementById('session-date-badge');
-            const guide = document.getElementById('session-guide');
+            document.getElementById('session-date-badge').innerText = `날짜: ${state.config.activeDate}`;
 
-            dateBadge.innerText = `날짜: ${state.activeDate}`;
-            if (state.isSessionActive) {
+            if (state.config.isSessionActive) {
                 sessionCard.className = "border-4 border-slate-950 rounded-2xl p-4 mb-6 relative bg-emerald-50";
                 badge.className = "absolute -top-3 right-3 text-white border-2 border-slate-950 text-[10px] sm:text-xs px-2.5 py-1 rounded font-black tracking-wider uppercase bg-emerald-600";
-                badge.innerText = "ACTIVE";
-                title.innerText = "오늘의 출석 세션 활성화 중! ⏱️";
-                guide.innerText = "인증번호를 입력해주세요";
+                badge.innerText = "ACTIVE"; title.innerText = "오늘의 출석 세션 활성화 중! ⏱️";
+                document.getElementById('session-guide').innerText = "인증번호를 입력해주세요";
             } else {
                 sessionCard.className = "border-4 border-slate-950 rounded-2xl p-4 mb-6 relative bg-rose-50";
                 badge.className = "absolute -top-3 right-3 text-white border-2 border-slate-950 text-[10px] sm:text-xs px-2.5 py-1 rounded font-black tracking-wider uppercase bg-rose-600";
-                badge.innerText = "INACTIVE";
-                title.innerText = "출석 세션이 닫혀있습니다 🔒";
-                guide.innerText = "운영진의 가동을 기다리세요";
+                badge.innerText = "INACTIVE"; title.innerText = "출석 세션이 닫혀있습니다 🔒";
+                document.getElementById('session-guide').innerText = "운영진의 가동을 기다리세요";
             }
 
-            // 2. 유저 실시간 라이브 피드백 보드 가동
+            // 유저 실시간 피드 렌더링
             document.getElementById('total-members-count').innerText = `총원 ${state.members.length}명`;
             const feedBox = document.getElementById('live-feed-box');
             feedBox.innerHTML = '';
-            const todayRecords = state.attendance[state.activeDate] || {};
             
             let hasRecords = false;
-            state.members.forEach(name => {
-                const rec = todayRecords[name];
+            state.members.forEach(m => {
+                const rec = state.attendance[m.name];
                 if (rec && (rec.status === 'present' || rec.status === 'late')) {
                     hasRecords = true;
                     const row = document.createElement('div');
                     row.className = "flex justify-between py-1.5 border-b border-slate-800 last:border-b-0";
-                    row.innerHTML = `<span class="text-blue-400 font-bold">${name}</span><span>${rec.status === 'present' ? '🟢 정상' : '🟡 지각'} (${rec.time})</span>`;
+                    row.innerHTML = `<span class="text-blue-400 font-bold">${m.name}</span><span>${rec.status === 'present' ? '🟢 정상' : '🟡 지각'} (${rec.time})</span>`;
                     feedBox.appendChild(row);
                 }
             });
-            if(!hasRecords) {
-                feedBox.innerHTML = `<p class="text-slate-500 text-center py-4">아직 확인된 출석 인원이 없습니다.</p>`;
-            }
+            if (!hasRecords) feedBox.innerHTML = `<p class="text-slate-500 text-center py-4">아직 확인된 출석 인원이 없습니다.</p>`;
 
-            // 3. 관리자 전용 제어 요소 바인딩
-            document.getElementById('admin-current-code').innerText = state.currentCode;
-            document.getElementById('admin-date-input').value = state.activeDate;
+            // 어드민 제어 센터 갱신
+            document.getElementById('admin-current-code').innerText = state.config.currentCode;
 
-            // 통계 가산 산출 연산 구조
+            // 당일 상태 통계 계산
             const stats = { present: 0, late: 0, scheduled: 0, absent: 0 };
-            const computedCumulative = {}; // 누적 통계 실시간 집계용 구조체
-            state.members.forEach(m => computedCumulative[m] = { late: 0, absent: 0 });
-
-            // 전체 날짜 순회하며 누적 통계 산출
-            Object.keys(state.attendance).forEach(date => {
-                const dayData = state.attendance[date] || {};
-                state.members.forEach(name => {
-                    const r = dayData[name];
-                    if (r) {
-                        if (date === state.activeDate) {
-                            if(r.status === 'present') stats.present++;
-                            if(r.status === 'late') stats.late++;
-                            if(r.status === 'absent') stats.absent++;
-                            if(r.status === 'scheduled_late' || r.status === 'scheduled_absent') stats.scheduled++;
-                        }
-                        // 사전 조율 상태도 예외 없이 누적 경고에 통합 합산 적용
-                        if(r.status === 'late' || r.status === 'scheduled_late') computedCumulative[name].late++;
-                        if(r.status === 'absent' || r.status === 'scheduled_absent') computedCumulative[name].absent++;
-                    }
-                });
+            state.members.forEach(m => {
+                const rec = state.attendance[m.name];
+                if (rec) {
+                    if (rec.status === 'present') stats.present++;
+                    if (rec.status === 'late') stats.late++;
+                    if (rec.status === 'absent') stats.absent++;
+                    if (rec.status === 'scheduled_late' || rec.status === 'scheduled_absent') stats.scheduled++;
+                }
             });
-
             document.getElementById('stat-present').innerText = `${stats.present}명`;
             document.getElementById('stat-late').innerText = `${stats.late}명`;
             document.getElementById('stat-scheduled').innerText = `${stats.scheduled}명`;
             document.getElementById('stat-absent').innerText = `${stats.absent}명`;
-            const recordedCount = stats.present + stats.late + stats.scheduled + stats.absent;
-            document.getElementById('stat-summary-text').innerText = `총원 ${state.members.length}명 중 ${recordedCount}명 기록됨`;
+            const recordedTotal = stats.present + stats.late + stats.scheduled + stats.absent;
+            document.getElementById('stat-summary-text').innerText = `총원 ${state.members.length}명 중 ${recordedTotal}명 기록됨`;
 
-            // 4. 어드민 회원 카드 렌더링 제어
+            // 관리자 명부 카드 그레이팅 구성
             const cardsGrid = document.getElementById('admin-member-cards-grid');
             cardsGrid.innerHTML = '';
-
-            let filterSearch = document.getElementById('admin-search-input').value.trim();
-            let processedMembers = state.members.map(name => {
-                const dayRec = todayRecords[name] || { status: 'none', time: '' };
-                return {
-                    name,
-                    status: dayRec.status,
-                    time: dayRec.time,
-                    cumulativeLate: computedCumulative[name]?.late || 0,
-                    cumulativeAbsent: computedCumulative[name]?.absent || 0
-                };
+            let searchQuery = document.getElementById('admin-search-input').value.trim();
+            
+            let filtered = state.members.map(m => {
+                const rec = state.attendance[m.name] || { status: 'none', time: '' };
+                return { ...m, status: rec.status, time: rec.time };
             });
 
-            if(filterSearch) {
-                processedMembers = processedMembers.filter(m => m.name.includes(filterSearch));
-            }
+            if (searchQuery) filtered = filtered.filter(m => m.name.includes(searchQuery));
 
-            // 정렬 정렬 분기 연산
-            processedMembers.sort((a, b) => {
+            // 정렬 정렬
+            filtered.sort((a, b) => {
                 if (adminSortKey === 'name-asc') return a.name.localeCompare(b.name, 'ko');
-                const timeA = a.time || '99:99:99';
-                const timeB = b.time || '99:99:99';
                 if (adminSortKey === 'speed-asc') {
-                    if (a.time && !b.time) return -1;
-                    if (!a.time && b.time) return 1;
-                    if (a.time && b.time) return timeA.localeCompare(timeB);
+                    if (a.time && !b.time) return -1; if (!a.time && b.time) return 1;
+                    if (a.time && b.time) return a.time.localeCompare(b.time);
                     return a.name.localeCompare(b.name, 'ko');
                 }
                 if (adminSortKey === 'speed-desc') {
-                    if (a.time && !b.time) return -1;
-                    if (!a.time && b.time) return 1;
-                    if (a.time && b.time) return timeB.localeCompare(timeA);
+                    if (a.time && !b.time) return -1; if (!a.time && b.time) return 1;
+                    if (a.time && b.time) return b.time.localeCompare(a.time);
                     return a.name.localeCompare(b.name, 'ko');
                 }
                 return 0;
             });
 
-            processedMembers.forEach(m => {
-                let statusBg = 'bg-slate-50 border-slate-300';
-                let statusLabel = '미출석';
-                let statusColor = 'text-slate-500 bg-slate-100 border-slate-300';
-                
+            filtered.forEach(m => {
+                let statusBg = 'bg-slate-50 border-slate-300'; let statusLabel = '미출석'; let statusColor = 'text-slate-500 bg-slate-100 border-slate-300';
                 if (m.status === 'present') {
                     statusBg = 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300'; statusLabel = '🟢 정상 출석'; statusColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
                 } else if (m.status === 'late') {
@@ -624,9 +518,23 @@
                             <span class="text-[10px] font-black px-1.5 py-0.5 rounded border-2 ${statusColor}">${statusLabel}</span>
                         </div>
                         ${m.time ? `<div class="text-[11px] text-slate-600 font-mono mb-2 bg-white/70 px-2 py-1 rounded border border-slate-200">⏱️ 완료 시각: ${m.time}</div>` : ''}
-                        <div class="bg-slate-900 text-slate-200 p-2.5 rounded-xl text-xs font-mono space-y-1 mb-4">
-                            <div class="flex justify-between"><span class="text-amber-400 font-bold">🟡 누적 지각:</span><span class="font-black">${m.cumulativeLate} 회</span></div>
-                            <div class="flex justify-between"><span class="text-rose-400 font-bold">🔴 누적 결석:</span><span class="font-black">${m.cumulativeAbsent} 회</span></div>
+                        
+                        <!-- [요구사항 반영] 관리자가 과거 누적치 기록을 자유롭게 수정·입력할 수 있는 직통 편집창 인풋 배치 -->
+                        <div class="bg-slate-900 text-slate-200 p-2.5 rounded-xl text-xs font-mono space-y-2 mb-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-amber-400 font-bold">🟡 누적 지각:</span>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" value="${m.cumulativeLate}" onchange="window.updateCumulativeDirectly('${m.name}', 'late', this.value)" class="w-14 bg-slate-800 border border-slate-700 text-center rounded text-white py-0.5 font-bold focus:outline-none focus:border-amber-400">
+                                    <span>회</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-rose-400 font-bold">🔴 누적 결석:</span>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" value="${m.cumulativeAbsent}" onchange="window.updateCumulativeDirectly('${m.name}', 'absent', this.value)" class="w-14 bg-slate-800 border border-slate-700 text-center rounded text-white py-0.5 font-bold focus:outline-none focus:border-rose-400">
+                                    <span>회</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="border-t-2 border-slate-200 pt-3 space-y-1.5">
@@ -643,302 +551,285 @@
             });
         }
 
-        // ================= 이벤트 제어 컨트롤러 핸들러 함수군 =================
+        // ================= 컨트롤러 이벤트 로직 핸들러 =================
 
-        // 상단 뷰 전이 버튼 제어
+        // 관리자가 누적 횟수를 타이핑 입력해 변경할 때 즉시 무선 동기화 트리거
+        window.updateCumulativeDirectly = function(name, type, value) {
+            const num = parseInt(value, 10) || 0;
+            const updatedList = state.members.map(m => {
+                if (m.name === name) {
+                    if (type === 'late') m.cumulativeLate = num;
+                    if (type === 'absent') m.cumulativeAbsent = num;
+                }
+                return m;
+            });
+            if (db) {
+                db.collection("social_attendance").doc("members").set({ list: updatedList });
+                triggerNotice('수정 완료', `[${name}]님의 누적 기록이 무선 동기화 저장되었습니다.`, 'success');
+            }
+        };
+
+        // 뷰 체인저 토글 버튼 리스너
         document.getElementById('toggle-view-btn').addEventListener('click', () => {
             playSound('click');
             if (currentView === 'user') {
                 document.getElementById('admin-password-input').value = '';
                 document.getElementById('admin-login-error').classList.add('hidden');
                 document.getElementById('admin-login-modal').classList.remove('hidden');
-            } else {
-                currentView = 'user';
-                render();
-            }
+            } else { currentView = 'user'; render(); }
         });
 
-        // 관리자 모드 패스워드 인증 처리
+        // 암호 검증 후 진입 처리
         document.getElementById('admin-login-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            const pw = document.getElementById('admin-password-input').value;
-            if (pw === state.adminPassword) {
-                playSound('success');
-                currentView = 'admin';
-                document.getElementById('admin-login-modal').className += " hidden";
-                triggerNotice('인증 성공', '운영진 관리 콘솔 영역으로 진입했습니다.', 'success');
-                render();
-            } else {
-                playSound('error');
-                document.getElementById('admin-login-error').classList.remove('hidden');
-            }
+            if (document.getElementById('admin-password-input').value === state.config.adminPassword) {
+                playSound('success'); currentView = 'admin';
+                document.getElementById('admin-login-modal').classList.add('hidden');
+                triggerNotice('인증 완수', '운영진 제어 콘솔 모드가 해제되었습니다.', 'success'); render();
+            } else { playSound('error'); document.getElementById('admin-login-error').classList.remove('hidden'); }
         });
-        document.getElementById('close-login-modal-btn').addEventListener('click', () => {
-            document.getElementById('admin-login-modal').classList.add('hidden');
-        });
+        document.getElementById('close-login-modal-btn').addEventListener('click', () => { document.getElementById('admin-login-modal').classList.add('hidden'); });
 
-        // 암호 변경 인터페이스 인터랙션
+        // 암호 변경 툴 제어
         document.getElementById('go-change-pw-btn').addEventListener('click', () => {
-            document.getElementById('pw-view-mode').classList.add('hidden');
-            document.getElementById('pw-edit-mode').classList.remove('hidden');
-            document.getElementById('new-pw-input').value = '';
+            document.getElementById('pw-view-mode').classList.add('hidden'); document.getElementById('pw-edit-mode').classList.remove('hidden');
         });
         document.getElementById('cancel-pw-btn').addEventListener('click', () => {
-            document.getElementById('pw-view-mode').classList.remove('hidden');
-            document.getElementById('pw-edit-mode').classList.add('hidden');
+            document.getElementById('pw-view-mode').classList.remove('hidden'); document.getElementById('pw-edit-mode').classList.add('hidden');
         });
         document.getElementById('save-pw-btn').addEventListener('click', () => {
             const val = document.getElementById('new-pw-input').value.trim();
-            if(!val) { triggerNotice('경고', '공백 암호는 지정할 수 없습니다.', 'error'); return; }
-            state.adminPassword = val;
-            saveStorage();
-            document.getElementById('pw-view-mode').classList.remove('hidden');
-            document.getElementById('pw-edit-mode').classList.add('hidden');
-            triggerNotice('암호 변경 완료', '보안 관리자 패스워드가 정상 갱신되었습니다.', 'success');
+            if (!val) { triggerNotice('에러', '공백 비밀번호는 제한됩니다.', 'error'); return; }
+            if (db) {
+                db.collection("social_attendance").doc("config").update({ adminPassword: val });
+                document.getElementById('pw-view-mode').classList.remove('hidden'); document.getElementById('pw-edit-mode').classList.add('hidden');
+                triggerNotice('변경 완료', '새로운 운영진 비밀번호가 전 기기에 실시간 적용되었습니다.', 'success');
+            }
         });
 
-        // 출석 시작 제어 연산
+        // 출석 시작 가동 세션 생성
         document.getElementById('btn-start-session').addEventListener('click', () => {
             playSound('click');
             const todayStr = new Date().toISOString().split('T')[0];
-            const randCode = Math.floor(100000 + Math.random() * 900000).toString();
-            
-            state.activeDate = todayStr;
-            state.currentCode = randCode;
-            state.isSessionActive = true;
-            
-            if(!state.attendance[todayStr]) state.attendance[todayStr] = {};
-            saveStorage();
-            triggerNotice('세션 기동 완료', `오늘 날짜로 출석체크 기능이 가동되었습니다. [코드: ${randCode}]`, 'success');
-            render();
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            if (db) {
+                db.collection("social_attendance").doc("config").set({
+                    adminPassword: state.config.adminPassword, activeDate: todayStr, currentCode: code, isSessionActive: true
+                });
+                triggerNotice('세션 가동', `오늘 자 출석체크 기능이 오픈되었습니다. [코드: ${code}]`, 'success');
+            }
         });
 
-        // 인증 코드 단독 새로고침
+        // 코드 갱신 난수 연산
         document.getElementById('btn-refresh-code').addEventListener('click', () => {
             playSound('click');
-            if(!state.isSessionActive) { triggerNotice('오류', '가동 중인 출석 세션이 없습니다.', 'error'); return; }
-            const randCode = Math.floor(100000 + Math.random() * 900000).toString();
-            state.currentCode = randCode;
-            saveStorage();
-            triggerNotice('코드 변경 완료', `신규 난수 인증 코드가 갱신되었습니다. [코드: ${randCode}]`, 'success');
-            render();
+            if (!state.config.isSessionActive) { triggerNotice('안내', '진행 중인 세션이 없습니다.', 'error'); return; }
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            if (db) db.collection("social_attendance").doc("config").update({ currentCode: code });
         });
 
-        // 날짜 강제 강제 변경 슬롯
+        // 날짜 수동 제어 변경
         document.getElementById('admin-date-input').addEventListener('change', (e) => {
-            state.activeDate = e.target.value;
-            if(!state.attendance[state.activeDate]) state.attendance[state.activeDate] = {};
-            saveStorage();
-            render();
+            if (db) db.collection("social_attendance").doc("config").update({ activeDate: e.target.value });
         });
 
-        // 세션 강제 락다운 마감
+        // 세션 락다운 닫기 마감
         document.getElementById('btn-close-session').addEventListener('click', () => {
             playSound('click');
-            state.isSessionActive = false;
-            saveStorage();
-            triggerNotice('세션 마감 안내', '사용자용 출석 세션을 완전히 차단했습니다.', 'info');
-            render();
+            if (db) db.collection("social_attendance").doc("config").update({ isSessionActive: false });
         });
 
-        // 신규 멤버 명렬 수동 가입
+        // 새 멤버 가입 편입
         document.getElementById('add-member-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            const input = document.getElementById('new-member-name-input');
-            const name = input.value.trim();
-            if(!name) { triggerNotice('누락', '이름을 기재해 주세요.', 'error'); return; }
-            if(state.members.includes(name)) { triggerNotice('중복', '이미 등록된 이름입니다.', 'error'); return; }
-            
-            state.members.push(name);
-            saveStorage();
-            input.value = '';
-            triggerNotice('추가 완수', `[${name}] 님이 회원 명부에 정상 편입되었습니다.`, 'success');
-            render();
+            const input = document.getElementById('new-member-name-input'); const name = input.value.trim();
+            if(!name) return;
+            if(state.members.some(m => m.name === name)) { triggerNotice('중복', '이미 명부에 있는 성명입니다.', 'error'); return; }
+            const updated = [...state.members, { name, cumulativeLate: 0, cumulativeAbsent: 0 }];
+            if (db) {
+                db.collection("social_attendance").doc("members").set({ list: updated });
+                input.value = ''; triggerNotice('추가 성공', `[${name}] 회원이 전 서버 명부에 등재되었습니다.`, 'success');
+            }
         });
 
-        // 회원 정렬 탭 버튼 리스너 바인딩
+        // 정렬 모듈 스위치 바인딩
         document.getElementById('sort-name-btn').addEventListener('click', (e) => { selectSort('name-asc', e.target); });
         document.getElementById('sort-speed-asc-btn').addEventListener('click', (e) => { selectSort('speed-asc', e.target); });
         document.getElementById('sort-speed-desc-btn').addEventListener('click', (e) => { selectSort('speed-desc', e.target); });
-        document.getElementById('admin-search-input').addEventListener('input', () => { render(); });
+        document.getElementById('admin-search-input').addEventListener('input', () => render());
 
-        function selectSort(key, targetBtn) {
-            playSound('click');
-            adminSortKey = key;
-            document.querySelectorAll('.sort-btn').forEach(b => {
-                b.className = "sort-btn px-2 py-2 sm:px-3 sm:py-1.5 rounded-lg border-2 text-[11px] sm:text-xs font-black transition-all bg-white text-slate-600 border-slate-300";
-            });
-            targetBtn.className = "sort-btn px-2 py-2 sm:px-3 sm:py-1.5 rounded-lg border-2 text-[11px] sm:text-xs font-black transition-all bg-slate-900 text-white border-slate-900";
+        function selectSort(key, btn) {
+            playSound('click'); adminSortKey = key;
+            document.querySelectorAll('.sort-btn').forEach(b => b.className = "sort-btn px-2 py-2 sm:px-3 sm:py-1.5 rounded-lg border-2 text-[11px] sm:text-xs font-black bg-white text-slate-600 border-slate-300");
+            btn.className = "sort-btn px-2 py-2 sm:px-3 sm:py-1.5 rounded-lg border-2 text-[11px] sm:text-xs font-black bg-slate-900 text-white border-slate-900";
             render();
         }
 
-        // 일반 사용자의 셀프 출석체크 요청 프로세스
+        // 일반 유저 셀프 출석체크 요청 서브밋
         document.getElementById('attendance-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            if(!state.isSessionActive) { playSound('error'); triggerNotice('차단', '현재 개방된 출석 세션이 존재하지 않습니다.', 'error'); return; }
+            if (!state.config.isSessionActive) { playSound('error'); triggerNotice('차단', '출석 입력이 승인되지 않은 상태입니다.', 'error'); return; }
             
             const name = document.getElementById('user-name-input').value.trim();
             const code = document.getElementById('user-code-input').value.trim();
 
-            if(!name || !code) { playSound('error'); triggerNotice('누락', '이름과 코드를 모두 작성하세요.', 'error'); return; }
-            if(!state.members.includes(name)) { playSound('error'); triggerNotice('미등록', '모임 등록 명부에 명시되지 않은 성명입니다.', 'error'); return; }
-            if(code !== state.currentCode) { playSound('error'); triggerNotice('코드 불일치', '모임 인증코드가 올바르지 않습니다.', 'error'); return; }
+            if (!name || !code) { playSound('error'); triggerNotice('누락', '모든 항목을 입력하세요.', 'error'); return; }
+            const targetM = state.members.find(m => m.name === name);
+            if (!targetM) { playSound('error'); triggerNotice('명부 부재', '회원 명단에 명시되지 않은 이름입니다.', 'error'); return; }
+            if (code !== state.config.currentCode) { playSound('error'); triggerNotice('인증 실패', '6자리 코드 번호가 일치하지 않습니다.', 'error'); return; }
 
-            const todayData = state.attendance[state.activeDate] || {};
-            if(todayData[name] && (todayData[name].status === 'present' || todayData[name].status === 'late' || todayData[name].status === 'absent')) {
-                playSound('error'); triggerNotice('중복 제출', '이미 출석 판정이 확정 마감된 인원입니다.', 'error'); return;
+            if (state.attendance[name] && ['present', 'late', 'absent'].includes(state.attendance[name].status)) {
+                playSound('error'); triggerNotice('이미 처리됨', '이미 금일 최종 판정이 승인 완료되었습니다.', 'error'); return;
             }
 
-            // 엄격한 시간별 자동 판정 연산 분기 트리
+            // 실시간 시간 연산 분기 (17:30:59초 기준 분리)
             const now = new Date();
-            const h = now.getHours(); const m = now.getMinutes(); const s = now.getSeconds();
-            const totalSec = (h * 3600) + (m * 60) + s;
-            const limitSec = (17 * 3600) + (30 * 60) + 59; // 17:30:59 기준선 초과대조
-
-            const determinedStatus = totalSec > limitSec ? 'late' : 'present';
+            const totalSec = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+            const limitSec = (17 * 3600) + (30 * 60) + 59;
+            const detStatus = totalSec > limitSec ? 'late' : 'present';
             const timeStr = now.toLocaleTimeString('ko-KR', { hour12: false });
 
-            if(!state.attendance[state.activeDate]) state.attendance[state.activeDate] = {};
-            state.attendance[state.activeDate][name] = { status: determinedStatus, time: timeStr };
-            saveStorage();
-            playSound('success');
+            // 통계 가산 자동 반영 연산 로직 연동
+            if (detStatus === 'late') targetM.cumulativeLate++;
 
-            // 축하 리액션 모달 주입 렌더링
-            document.getElementById('modal-res-name').innerText = name;
-            document.getElementById('modal-res-status').innerText = determinedStatus === 'present' ? '🟢 정상 출석' : '🟡 지각 판정';
-            document.getElementById('modal-res-status').className = determinedStatus === 'present' ? "font-black text-emerald-600" : "font-black text-amber-500";
-            document.getElementById('modal-res-time').innerText = timeStr;
-            
-            document.getElementById('success-modal').classList.remove('hidden');
-            triggerConfetti();
+            if (db) {
+                // 트랜잭션 동시 다발 멀티 쓰기 반영
+                db.collection("social_attendance").doc(`records_${state.config.activeDate}`).update({ [name]: { status: detStatus, time: timeStr } })
+                  .catch(() => {
+                      db.collection("social_attendance").doc(`records_${state.config.activeDate}`).set({ [name]: { status: detStatus, time: timeStr } }, { merge: true });
+                  });
+                db.collection("social_attendance").doc("members").set({ list: state.members });
 
-            document.getElementById('user-name-input').value = '';
-            document.getElementById('user-code-input').value = '';
-            render();
+                // 축포 팝업 전이
+                document.getElementById('modal-res-name').innerText = name;
+                document.getElementById('modal-res-status').innerText = detStatus === 'present' ? '🟢 정상 출석' : '🟡 지각 판정';
+                document.getElementById('modal-res-status').className = detStatus === 'present' ? "font-black text-emerald-600" : "font-black text-amber-500";
+                document.getElementById('modal-res-time').innerText = timeStr;
+                document.getElementById('success-modal').classList.remove('hidden');
+                triggerConfetti();
+
+                document.getElementById('user-name-input').value = ''; document.getElementById('user-code-input').value = '';
+            }
         });
+        document.getElementById('close-success-modal-btn').addEventListener('click', () => { document.getElementById('success-modal').classList.add('hidden'); });
 
-        document.getElementById('close-success-modal-btn').addEventListener('click', () => {
-            document.getElementById('success-modal').classList.add('hidden');
-        });
-
-        // 관리자 강제 상태 다이렉트 변환 오버라이드
+        // 관리자용 강제 직통 오버라이드 펑션
         window.forceStatus = function(name, status) {
             playSound('click');
-            const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false }) + " (수동)";
-            if(!state.attendance[state.activeDate]) state.attendance[state.activeDate] = {};
-            state.attendance[state.activeDate][name] = { status, time: timeStr };
-            saveStorage();
-            render();
+            const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false }) + " (강제)";
+            const targetM = state.members.find(m => m.name === name);
+            const prevStatus = state.attendance[name]?.status || 'none';
+
+            // 이전 상태 패널티 차감 복구 연산
+            if (targetM) {
+                if (prevStatus === 'late' || prevStatus === 'scheduled_late') targetM.cumulativeLate = Math.max(0, targetM.cumulativeLate - 1);
+                if (prevStatus === 'absent' || prevStatus === 'scheduled_absent') targetM.cumulativeAbsent = Math.max(0, targetM.cumulativeAbsent - 1);
+                // 신형 상태 가산 연산
+                if (status === 'late') targetM.cumulativeLate++;
+                if (status === 'absent') targetM.cumulativeAbsent++;
+            }
+
+            if (db) {
+                db.collection("social_attendance").doc(`records_${state.config.activeDate}`).set({ [name]: { status, time: timeStr } }, { merge: true });
+                db.collection("social_attendance").doc("members").set({ list: state.members });
+            }
         };
 
-        // 수동 정밀 조율 모달 핸들링
+        // 예약 모달 제어 슬롯
         window.openPreModal = function(name) {
-            playSound('click');
-            selectedPreMember = name;
+            playSound('click'); selectedPreMember = name;
             document.getElementById('pre-modal-name').innerText = `${name} 님`;
-            document.getElementById('pre-modal-date').innerText = `📅 세션 일자: ${state.activeDate}`;
+            document.getElementById('pre-modal-date').innerText = `📅 세션 일자: ${state.config.activeDate}`;
             document.getElementById('pre-status-modal').classList.remove('hidden');
         };
-        document.getElementById('close-pre-modal-btn').addEventListener('click', () => {
-            document.getElementById('pre-status-modal').classList.add('hidden');
-        });
-        document.querySelectorAll('.pre-set-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const status = btn.getAttribute('data-status');
-                if(!state.attendance[state.activeDate]) state.attendance[state.activeDate] = {};
-                
-                if(status === 'none') {
-                    delete state.attendance[state.activeDate][selectedPreMember];
-                } else {
-                    const label = status === 'scheduled_late' ? '지각 예정' : '결석 예정';
-                    state.attendance[state.activeDate][selectedPreMember] = { status, time: `${label} (기록)` };
+        document.getElementById('close-pre-modal-btn').addEventListener('click', () => { document.getElementById('pre-status-modal').classList.add('hidden'); });
+        document.querySelectorAll('.pre-set-btn').forEach(b => {
+            b.addEventListener('click', () => {
+                const status = b.getAttribute('data-status');
+                const targetM = state.members.find(m => m.name === selectedPreMember);
+                const prevStatus = state.attendance[selectedPreMember]?.status || 'none';
+
+                if (targetM) {
+                    if (prevStatus === 'late' || prevStatus === 'scheduled_late') targetM.cumulativeLate = Math.max(0, targetM.cumulativeLate - 1);
+                    if (prevStatus === 'absent' || prevStatus === 'scheduled_absent') targetM.cumulativeAbsent = Math.max(0, targetM.cumulativeAbsent - 1);
+                    if (status === 'scheduled_late') targetM.cumulativeLate++;
+                    if (status === 'scheduled_absent') targetM.cumulativeAbsent++;
                 }
-                saveStorage();
-                document.getElementById('pre-status-modal').classList.add('hidden');
-                render();
+
+                if (db) {
+                    if (status === 'none') {
+                        db.collection("social_attendance").doc(`records_${state.config.activeDate}`).update({ [selectedPreMember]: firebase.firestore.FieldValue.delete() });
+                    } else {
+                        const lbl = status === 'scheduled_late' ? '지각 예정' : '결석 예정';
+                        db.collection("social_attendance").doc(`records_${state.config.activeDate}`).set({ [selectedPreMember]: { status, time: `${lbl} (사전)` } }, { merge: true });
+                    }
+                    db.collection("social_attendance").doc("members").set({ list: state.members });
+                    document.getElementById('pre-status-modal').classList.add('hidden');
+                }
             });
         });
 
-        // 명부 영구 삭제 제어창 핸들링
+        // 회원 영구 명부 삭제 제어
         window.openDeleteModal = function(name) {
-            playSound('click');
-            memberToDelete = name;
+            playSound('click'); memberToDelete = name;
             document.getElementById('delete-modal-target').innerText = `[${name}]`;
             document.getElementById('delete-confirm-modal').classList.remove('hidden');
         };
-        document.getElementById('cancel-delete-btn').addEventListener('click', () => {
-            document.getElementById('delete-confirm-modal').classList.add('hidden');
-        });
+        document.getElementById('cancel-delete-btn').addEventListener('click', () => { document.getElementById('delete-confirm-modal').classList.add('hidden'); });
         document.getElementById('execute-delete-btn').addEventListener('click', () => {
-            state.members = state.members.filter(m => m !== memberToDelete);
-            // 과거 당일 기록에서 제거 연산 동시 동기화
-            Object.keys(state.attendance).forEach(d => {
-                if(state.attendance[d][memberToDelete]) delete state.attendance[d][memberToDelete];
-            });
-            saveStorage();
-            document.getElementById('delete-confirm-modal').classList.add('hidden');
-            triggerNotice('명부 제명 완료', '해당 회원의 정보 및 통계가 영구 제거되었습니다.', 'info');
-            render();
+            const updated = state.members.filter(m => m.name !== memberToDelete);
+            if (db) {
+                db.collection("social_attendance").doc("members").set({ list: updated });
+                db.collection("social_attendance").doc(`records_${state.config.activeDate}`).update({ [memberToDelete]: firebase.firestore.FieldValue.delete() }).catch(()=>{});
+                document.getElementById('delete-confirm-modal').classList.add('hidden');
+                triggerNotice('명부 삭제', '명부 제명 및 당일 출석 내역 소멸이 동기화되었습니다.', 'info');
+            }
         });
-        document.getElementById('close-toast-btn').addEventListener('click', () => {
-            document.getElementById('toast-notice').classList.add('hidden');
-        });
+        document.getElementById('close-toast-btn').addEventListener('click', () => { document.getElementById('toast-notice').classList.add('hidden'); });
 
-        // ================= 백그라운드 자동 시스템 연산부 =================
-
-        // 20:00 마감 스위퍼 스케줄러 자동 감지 엔진 (4초 루프 주동 가동)
+        // ================= 백그라운드 20:00(오후 8시) 마감 수위퍼 스케줄러 =================
         setInterval(() => {
-            if (!state.isSessionActive) return;
+            if (!state.config.isSessionActive || !db) return;
             const todayStr = new Date().toISOString().split('T')[0];
-            if (state.activeDate !== todayStr) return; // 활성 세션이 오늘 날짜인 경우에만 작동
+            if (state.config.activeDate !== todayStr) return;
 
             const now = new Date();
             if (now.getHours() >= 20) {
-                let checkUpdate = false;
-                if(!state.attendance[todayStr]) state.attendance[todayStr] = {};
+                let isBatchTriggered = false;
+                const batchUpdates = {};
 
-                state.members.forEach(name => {
-                    const rec = state.attendance[todayStr][name];
-                    if(!rec || rec.status === 'none' || !rec.status) {
-                        state.attendance[todayStr][name] = {
-                            status: 'absent',
-                            time: '20:00 (자동결석)'
-                        };
-                        checkUpdate = true;
+                state.members.forEach(m => {
+                    const rec = state.attendance[m.name];
+                    if (!rec || !rec.status || rec.status === 'none') {
+                        batchUpdates[m.name] = { status: 'absent', time: '20:00 (자동결석)' };
+                        m.cumulativeAbsent++;
+                        isBatchTriggered = true;
                     }
                 });
 
-                if(checkUpdate) {
-                    saveStorage();
-                    triggerNotice('⏰ 오후 8시 마감 완료', '미출석 회원이 일괄 자동 결석 처리 통계에 합산되었습니다.', 'info');
-                    render();
+                if (isBatchTriggered) {
+                    db.collection("social_attendance").doc(`records_${todayStr}`).set(batchUpdates, { merge: true });
+                    db.collection("social_attendance").doc("members").set({ list: state.members });
+                    triggerNotice('⏰ 오후 8시 타임오버', '미출석 인원 전체가 자동으로 결석 합산 처리되었습니다.', 'info');
                 }
             }
-        }, 4000);
+        }, 5000);
 
-        // 시각 효과 가상 축포 시뮬레이터 연출
         function triggerConfetti() {
-            const container = document.getElementById('confetti-container');
-            container.innerHTML = '';
+            const container = document.getElementById('confetti-container'); container.innerHTML = '';
             const colors = ['#2563eb', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
-            for (let i = 0; i < 45; i++) {
-                const conf = document.createElement('div');
-                conf.className = 'confetti';
-                conf.style.left = `${Math.random() * 100}%`;
-                conf.style.top = `-20px`;
+            for (let i = 0; i < 40; i++) {
+                const conf = document.createElement('div'); conf.className = 'confetti';
+                conf.style.left = `${Math.random() * 100}%`; conf.style.top = `-20px`;
                 conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                conf.style.transform = `rotate(${Math.random() * 360}deg)`;
-                conf.style.animation = `fall ${2.2 + Math.random() * 1.8}s linear infinite`;
-                conf.style.animationDelay = `${Math.random() * 1.2}s`;
-                conf.style.width = `${6 + Math.random() * 10}px`;
-                conf.style.height = `${10 + Math.random() * 14}px`;
+                conf.style.transform = `rotate(${Math.random() * 360}deg)`; conf.style.animation = `fall ${2.2 + Math.random() * 1.8}s linear infinite`;
+                conf.style.animationDelay = `${Math.random() * 1.2}s`; conf.style.width = `${6 + Math.random() * 8}px`; conf.style.height = `${10 + Math.random() * 10}px`;
                 container.appendChild(conf);
             }
         }
 
-        // 앱 구동 초기 진입점 실행부
-        loadStorage();
-        render();
+        // 초기 시작점 런칭
+        initRealtimeListeners();
     </script>
 </body>
 </html>
